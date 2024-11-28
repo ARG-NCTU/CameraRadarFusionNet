@@ -10,7 +10,17 @@ First, clone the CameraRadarFusionNet repository from GitHub:
 git clone git@github.com:ARG-NCTU/CameraRadarFusionNet.git
 ```
 
+Enter the CameraRadarFusionNet repository:
+```bash
+cd ~/CameraRadarFusionNet
+```
+
 2. Run the Docker Environment
+
+Pull the required Docker environment:
+```bash
+source ~/CameraRadarFusionNet/Docker/gpu/pull.sh
+```
 
 Launch the required Docker environment with GPU support:
 ```bash
