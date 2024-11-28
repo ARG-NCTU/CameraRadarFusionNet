@@ -45,3 +45,8 @@ crfnet/configs/neural_filter/*
 !crfnet/tb_logs/.gitkeep 
 !crfnet/saved_models/.gitkeep 
 *.code-workspace
+
+############## DATA FILES ##############
+v1.0-mini.tgz
+data/
+
