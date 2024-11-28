@@ -23,10 +23,13 @@ from PIL import Image
 # Allow relative imports when being executed as script.
 if __name__ == "__main__" and not __package__:
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-    import crfnet.raw_data_fusion  # noqa: F401
-    __package__ = "crfnet.raw_data_fusion"
+    import crfnet.data_processing.fusion
+    __package__ = "crfnet.data_processing.fusion"
+    # import crfnet.raw_data_fusion  # noqa: F401
+    # __package__ = "crfnet.raw_data_fusion"
 
-from nuscenes.utils.data_classes import PointCloud
+# from nuscenes.utils.data_classes import PointCloud
+from nuscenes.utils.data_classes import RadarPointCloud
 from ...utils import radar
 # from nuscenes.utils.geometry_utils import view_points
 
@@ -316,7 +319,17 @@ def map_pointcloud_to_image(nusc, radar_points, pointsensor_token, camera_token,
     cam = nusc.get('sample_data', camera_token)
     pointsensor = nusc.get('sample_data', pointsensor_token)
 
-    pc = PointCloud(radar_points)
+    # pc = PointCloud(radar_points)
+    
+    # Adjust radar points to ensure 18 rows
+    if radar_points.shape[0] < 18:
+        missing_metadata = np.zeros((18 - radar_points.shape[0], radar_points.shape[1]))
+        radar_points = np.vstack((radar_points, missing_metadata))
+    elif radar_points.shape[0] > 18:
+        radar_points = radar_points[:18, :]  # Trim to 18 rows
+    
+    print("Radar points shape after adjustment:", radar_points.shape)
+    pc = RadarPointCloud(radar_points)
 
     # Points live in the point sensor frame. So they need to be transformed via global to the image plane.
     # First step: transform the point-cloud to the ego vehicle frame for the timestamp of the sweep.
@@ -645,12 +658,13 @@ def create_imagep_visualization(image_plus_data, color_channel="distance", \
 
 if __name__ == '__main__':
     from nuscenes.nuscenes import NuScenes
-    from ..tools_nuscenes.nuscenes_helper import get_sensor_sample_data
+    # from ..tools_nuscenes.nuscenes_helper import get_sensor_sample_data
+    from crfnet.utils.nuscenes_helper import get_sensor_sample_data
 
     # execute functions
     # Initialize the database
-    home =  os.path.expanduser("~")
-    nusc = NuScenes(version='v0.1', dataroot=home +'/data/nuscenes', verbose=True)
+    home =  os.path.expanduser("~/CameraRadarFusionNet")
+    nusc = NuScenes(version='v1.0-mini', dataroot=home +'/data/nuscenes', verbose=True)
 
     # Specify sensors to use
     radar_channel = 'RADAR_FRONT'
@@ -659,50 +673,55 @@ if __name__ == '__main__':
     # Get all scene tokens in a list
     scene_tokens = [s['token'] for s in nusc.scene]
 
-    # Choose a scene token (between 0 and 100)
-    scene_token = scene_tokens[88]
-
-    # Get the first sample of this scene to be demonstrated
-    scene_rec = nusc.get('scene', scene_token)
-    sample = nusc.get('sample', scene_rec['first_sample_token'])
-
-    # Get the sample token and the records for sensor tokens
-    sample_token = scene_rec['first_sample_token']
-    sample_record = nusc.get('sample', sample_token)
+    # scene_token = scene_tokens[1]
     
+    for i, scene_token in enumerate(scene_tokens):
 
-    # Grab the front camera and the radar sensor.
-    radar_token = sample_record['data'][radar_channel]
-    camera_token = sample_record['data'][camera_channel]
+        # Get the first sample of this scene to be demonstrated
+        scene_rec = nusc.get('scene', scene_token)
+        sample = nusc.get('sample', scene_rec['first_sample_token'])
 
+        # Get the sample token and the records for sensor tokens
+        sample_token = scene_rec['first_sample_token']
+        sample_record = nusc.get('sample', sample_token)
+        
 
-    # Get radar and image data
-    radar_data = get_sensor_sample_data(nusc, sample, radar_channel)
-    image_data = get_sensor_sample_data(nusc, sample, camera_channel)
-
-
-    ## Define parameters for image_plus_creation
-
-    # Desired image plus shape (resizing)
-    image_target_shape = (450, 450)
-
-    # Desired height for projection lines (2 options)
-    # ... a.) Tuple (e.g. height=(0,3)) to define lower and upper boundary
-    # ... b.) height = 'FOV' for calculating the heights after the field of view of the radar
-    height = (0, 3) #'FOV'
+        # Grab the front camera and the radar sensor.
+        radar_token = sample_record['data'][radar_channel]
+        camera_token = sample_record['data'][camera_channel]
 
 
-    # Call the main function to obtain image_plus_data
+        # Get radar and image data
+        radar_data = get_sensor_sample_data(nusc, sample, radar_channel)
+        image_data = get_sensor_sample_data(nusc, sample, camera_channel)
 
-    image_plus_data = imageplus_creation(nusc,
-        image_data, radar_data, radar_token, camera_token, height, image_target_shape, clear_radar=False, clear_image=False)
 
- 
-    # Visualize the result
-    imgp_viz = create_imagep_visualization(image_plus_data)
-    cv2.imshow('image', imgp_viz)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+        ## Define parameters for image_plus_creation
+
+        # Desired image plus shape (resizing)
+        image_target_shape = (450, 450)
+
+        # Desired height for projection lines (2 options)
+        # ... a.) Tuple (e.g. height=(0,3)) to define lower and upper boundary
+        # ... b.) height = 'FOV' for calculating the heights after the field of view of the radar
+        height = (0, 3) #'FOV'
+
+
+        # Call the main function to obtain image_plus_data
+
+        image_plus_data = imageplus_creation(nusc,
+            image_data, radar_data, radar_token, camera_token, height, image_target_shape, clear_radar=False, clear_image=False)
+
+    
+        # Visualize the result
+        imgp_viz = create_imagep_visualization(image_plus_data)
+        os.makedirs(os.path.join(home, 'data', 'visualization'), exist_ok=True)
+        image_saved_path = os.path.join(home, 'data', 'visualization', f'image_plus_{i}.png')
+        cv2.imwrite(image_saved_path, imgp_viz)
+
+        # cv2.imshow('image', imgp_viz)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
 
 ### UNUSED FUNCTION BUT STORED HERE DUE TO LATER POSSIBLE NEEDS ###
