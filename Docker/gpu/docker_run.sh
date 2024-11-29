@@ -6,9 +6,9 @@ ARGS=("$@")
 PROJ_NAME="CameraRadarFusionNet"
 
 # Specify dataset, log, and model directories
-HOST_DATA_DIR="/data/nuscenes"
-HOST_LOG_DIR="/CRFN/crfnet/tb_logs"
-HOST_MODEL_DIR="/CRFN/crfnet/saved_models"
+HOST_DATA_DIR="~/CameraRadarFusionNet/data/nuscenes"
+HOST_LOG_DIR="~/CameraRadarFusionNet/crfnet/tb_logs"
+HOST_MODEL_DIR="~/CameraRadarFusionNet/crfnet/saved_models"
 
 # Make sure processes in the container can connect to the x server
 # Necessary so gazebo can create a context for OpenGL rendering (even headless)
