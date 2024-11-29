@@ -664,7 +664,7 @@ if __name__ == '__main__':
     # execute functions
     # Initialize the database
     home =  os.path.expanduser("~/CameraRadarFusionNet")
-    nusc = NuScenes(version='v1.0-mini', dataroot=home +'/data/nuscenes', verbose=True)
+    nusc = NuScenes(version='v1.0-mini', dataroot=home +'/data/sets/nuscenes', verbose=True)
 
     # Specify sensors to use
     radar_channel = 'RADAR_FRONT'
